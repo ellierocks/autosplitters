@@ -1,5 +1,7 @@
 # sadx-livesplit-one
 
+![sadx-livesplit-one example](assets/example.png)
+
 Version: `0.1.0`
 
 LiveSplit One compatible alternative to Sora-yx's desktop LiveSplit ASL autosplitter from [`Sora-yx/autosplitters`](https://github.com/Sora-yx/autosplitters).
@@ -12,7 +14,7 @@ This port targets LiveSplit One's Auto Splitting Runtime (`asr`) instead of ASL.
 - Optional auto reset on main menu
 - Frame-counted in-game time and load removal
 - Emblem, boss, stage-entry, boss-entry, upgrade, character-entry, and miscellaneous splits
-- Steam `sonic.exe` and `Sonic Adventure DX.exe` process names
+- `sonic.exe` and `Sonic Adventure DX.exe` process names
 
 ## Install
 
