@@ -52,7 +52,13 @@ The output is:
 
 `target/wasm32-wasip1/release/sadx_livesplit_one.wasm`
 
-## Release Checklist
+## Releases
+
+Every push to `main` builds `target/wasm32-wasip1/release/sadx_livesplit_one.wasm` and publishes it to the GitHub release whose tag matches the package version in `Cargo.toml`.
+
+For example, version `0.1.0` publishes to tag/release `0.1.0`. If more commits are pushed without changing the version, the workflow moves that version tag to the latest `main` commit and replaces the release asset.
+
+## Manual Release Checklist
 
 - Run `cargo fmt --check`.
 - Run `cargo check --release`.

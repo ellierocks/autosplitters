@@ -454,13 +454,11 @@ async fn main() {
                     timer::pause_game_time();
 
                     match timer::state() {
-                        TimerState::NotRunning => {
-                            if should_start(&settings, &current, &old) {
-                                run.reset_for_start(Instant::now());
-                                timer::set_game_time(Duration::ZERO);
-                                timer::start();
-                                timer::pause_game_time();
-                            }
+                        TimerState::NotRunning if should_start(&settings, &current, &old) => {
+                            run.reset_for_start(Instant::now());
+                            timer::set_game_time(Duration::ZERO);
+                            timer::start();
+                            timer::pause_game_time();
                         }
                         TimerState::Running | TimerState::Paused => {
                             if should_reset(&settings, &current, &old) {
