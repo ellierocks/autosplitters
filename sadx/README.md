@@ -1,10 +1,10 @@
-# Sonic Adventure DX LiveSplit One Autosplitter
+# sadx-livesplit-one
 
 Version: `0.1.0`
 
-LiveSplit One compatible alternative to the desktop LiveSplit ASL currently listed in `LiveSplit.AutoSplitters.xml`:
+LiveSplit One compatible alternative to Sora-yx's desktop LiveSplit ASL autosplitter from [`Sora-yx/autosplitters`](https://github.com/Sora-yx/autosplitters).
 
-`https://raw.githubusercontent.com/Sora-yx/autosplitters/master/Sonic%20Adventure%20DX-%20Director-s%20Cut/LiveSplit.SADX.asl`
+Credit to Sora-yx for the original Sonic Adventure DX ASL autosplitter logic this port is based on.
 
 This port targets LiveSplit One's Auto Splitting Runtime (`asr`) instead of ASL. It preserves the current desktop script's core behavior:
 
@@ -29,7 +29,7 @@ rustup target add wasm32-wasip1
 Build the release WebAssembly module with:
 
 ```sh
-cargo build --release --target wasm32-wasip1
+cargo build --release
 ```
 
 The output is:
@@ -39,8 +39,8 @@ The output is:
 ## Release Checklist
 
 - Run `cargo fmt --check`.
-- Run `cargo check --release --target wasm32-wasip1`.
-- Run `cargo clippy --release --target wasm32-wasip1 -- -D warnings`.
-- Run `cargo test --target wasm32-wasip1 --no-run`.
-- Run `cargo build --release --target wasm32-wasip1`.
+- Run `cargo check --release`.
+- Run `cargo clippy --release -- -D warnings`.
+- Run `cargo test --no-run`.
+- Run `cargo build --release`.
 - Attach `target/wasm32-wasip1/release/sadx_livesplit_one.wasm` to the GitHub release.
