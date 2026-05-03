@@ -6,7 +6,15 @@ Version: `0.1.0`
 
 LiveSplit One compatible alternative to Sora-yx's desktop LiveSplit ASL autosplitter from [`Sora-yx/autosplitters`](https://github.com/Sora-yx/autosplitters).
 
-Credit to Sora-yx for the original Sonic Adventure DX ASL autosplitter logic this port is based on.
+Credit to Sora-yx and the earlier Sonic Adventure DX autosplitter contributors whose ASL logic this port is based on:
+
+- [TurtleMan64](https://github.com/TurtleMan64/)
+- [Ngolinvaux](https://github.com/Ngolinvaux)
+- [IDGeek121](https://github.com/IDGeek121)
+- [Sora](https://github.com/Sora-yx)
+- [skoobmaster](https://github.com/skewbmaster/)
+
+Credit also to [Refragg](https://github.com/Refragg), who previously created an independent LiveSplit One / WASM port at [`Refragg/sadx-wasm-auto-splitter`](https://github.com/Refragg/sadx-wasm-auto-splitter). This project was created separately before I discovered that earlier port.
 
 This port targets LiveSplit One's Auto Splitting Runtime (`asr`) instead of ASL. It preserves the current desktop script's core behavior:
 
@@ -32,6 +40,12 @@ Build the release WebAssembly module with:
 
 ```sh
 cargo build --release
+```
+
+The repository's Cargo config targets `wasm32-wasip1` by default, so no extra target flag is needed. You can also use the shorter alias:
+
+```sh
+cargo b
 ```
 
 The output is:

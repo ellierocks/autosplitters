@@ -7,11 +7,15 @@ use asr::{
     future::{next_tick, retry},
     settings::{gui::Title, Gui},
     time::Duration,
-    time_util::Instant,
     timer::{self, TimerState},
     Address, Process,
 };
 use bytemuck::Pod;
+
+#[cfg(not(test))]
+use asr::time_util::Instant;
+#[cfg(test)]
+use std::time::Instant;
 
 asr::async_main!(stable);
 asr::panic_handler!();
