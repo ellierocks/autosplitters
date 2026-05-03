@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(test)]
+extern crate std;
+
 use asr::{
     future::{next_tick, retry},
     settings::{gui::Title, Gui},
@@ -335,6 +338,56 @@ struct GameState {
     laserblaster: u8,
 }
 
+#[cfg(test)]
+impl Default for GameState {
+    fn default() -> Self {
+        Self {
+            global_frame_count: 0,
+            output_frame_count: 0,
+            in_cutscene: 0,
+            game_status: 0,
+            game_mode: 0,
+            in_prerendered_movie: 0,
+            curr_character: 0,
+            last_story: 0,
+            timer_start: 0,
+            demo_playing: 0,
+            boss_health: 0,
+            level: 0,
+            level_copy: 0,
+            act: 0,
+            lives: 0,
+            e101_flag: 0,
+            adventure_data: 0,
+            rm_flag: 0,
+            mk2_value: 0,
+            walker_value: 0,
+            selected_character: 0,
+            music: 0,
+            lw_flag: 0,
+            emblem_bytes: [0; 17],
+            event_bytes: [0; 353],
+            lightshoes: 0,
+            crystalring: 0,
+            ancientlight: 0,
+            jetanklet: 0,
+            rhythmbadge: 0,
+            shovelclaw: 0,
+            fightinggloves: 0,
+            warriorfeather: 0,
+            longhammer: 0,
+            lifebelt: 0,
+            powerrod: 0,
+            lureec: 0,
+            lureic: 0,
+            luress: 0,
+            luremr: 0,
+            jetbooster: 0,
+            laserblaster: 0,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct RunState {
     total_frames: i64,
@@ -400,12 +453,15 @@ async fn main() {
                         TimerState::NotRunning => {
                             if should_start(&settings, &current, &old) {
                                 run.reset_for_start(Instant::now());
+                                timer::set_game_time(Duration::ZERO);
                                 timer::start();
                                 timer::pause_game_time();
                             }
                         }
                         TimerState::Running | TimerState::Paused => {
                             if should_reset(&settings, &current, &old) {
+                                run.reset_for_start(Instant::now());
+                                timer::set_game_time(Duration::ZERO);
                                 timer::reset();
                             } else if should_split(&settings, &current, &old, &mut run) {
                                 timer::split();
@@ -482,16 +538,28 @@ fn story_enter(current: &GameState, old: &GameState) -> bool {
 }
 
 fn should_start(settings: &Settings, current: &GameState, old: &GameState) -> bool {
+    should_start_with_trial_setting(settings.char_start_ban_trial, current, old)
+}
+
+fn should_reset(settings: &Settings, current: &GameState, old: &GameState) -> bool {
+    should_reset_with_setting(settings.reset, current, old)
+}
+
+fn should_start_with_trial_setting(
+    char_start_ban_trial: bool,
+    current: &GameState,
+    old: &GameState,
+) -> bool {
     let start = story_enter(current, old);
-    if settings.char_start_ban_trial {
+    if char_start_ban_trial {
         start && current.game_mode != 9
     } else {
         start
     }
 }
 
-fn should_reset(settings: &Settings, current: &GameState, old: &GameState) -> bool {
-    settings.reset && current.game_mode == 12 && old.curr_character != 6 && current.level_copy != 32
+fn should_reset_with_setting(reset: bool, current: &GameState, old: &GameState) -> bool {
+    reset && current.game_mode == 12 && old.curr_character != 6 && current.level_copy != 32
 }
 
 fn should_split(
@@ -900,4 +968,139 @@ fn update_game_time(current: &GameState, old: &GameState, run: &mut RunState) {
 fn game_time(run: &RunState) -> Duration {
     Duration::saturating_seconds_f64(run.total_frames as f64 / 60.0)
         .saturating_add(run.prerendered_movie_rta)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn story_select_state() -> GameState {
+        GameState {
+            game_status: 21,
+            game_mode: 12,
+            ..GameState::default()
+        }
+    }
+
+    #[test]
+    fn starts_on_story_select_exit() {
+        let old = story_select_state();
+        let current = GameState {
+            game_status: 21,
+            game_mode: 0,
+            ..old
+        };
+
+        assert!(should_start_with_trial_setting(false, &current, &old));
+    }
+
+    #[test]
+    fn can_block_trial_mode_start() {
+        let old = story_select_state();
+        let current = GameState {
+            game_status: 21,
+            game_mode: 9,
+            ..old
+        };
+
+        assert!(should_start_with_trial_setting(false, &current, &old));
+        assert!(!should_start_with_trial_setting(true, &current, &old));
+    }
+
+    #[test]
+    fn reset_requires_setting_and_main_menu() {
+        let old = GameState::default();
+        let current = GameState {
+            game_mode: 12,
+            ..GameState::default()
+        };
+
+        assert!(should_reset_with_setting(true, &current, &old));
+        assert!(!should_reset_with_setting(false, &current, &old));
+    }
+
+    #[test]
+    fn reset_ignores_gamma_and_chao_garden() {
+        let gamma_old = GameState {
+            curr_character: 6,
+            ..GameState::default()
+        };
+        let chao_garden_current = GameState {
+            game_mode: 12,
+            level_copy: 32,
+            ..GameState::default()
+        };
+        let menu_current = GameState {
+            game_mode: 12,
+            ..GameState::default()
+        };
+
+        assert!(!should_reset_with_setting(true, &menu_current, &gamma_old));
+        assert!(!should_reset_with_setting(
+            true,
+            &chao_garden_current,
+            &GameState::default()
+        ));
+    }
+
+    #[test]
+    fn frame_counted_game_time_removes_loads() {
+        let mut run = RunState::new(Instant::now());
+        let old = GameState {
+            global_frame_count: 100,
+            output_frame_count: 50,
+            ..GameState::default()
+        };
+        let current = GameState {
+            global_frame_count: 110,
+            output_frame_count: 80,
+            ..old
+        };
+
+        update_game_time(&current, &old, &mut run);
+
+        assert_eq!(run.total_frames, 10);
+        assert_eq!(
+            game_time(&run),
+            Duration::saturating_seconds_f64(10.0 / 60.0)
+        );
+    }
+
+    #[test]
+    fn menu_time_uses_output_frames() {
+        let mut run = RunState::new(Instant::now());
+        let old = GameState {
+            global_frame_count: 100,
+            output_frame_count: 50,
+            game_mode: 12,
+            ..GameState::default()
+        };
+        let current = GameState {
+            global_frame_count: 100,
+            output_frame_count: 80,
+            ..old
+        };
+
+        update_game_time(&current, &old, &mut run);
+
+        assert_eq!(run.total_frames, 30);
+    }
+
+    #[test]
+    fn cutscene_time_counts_double_frames() {
+        let mut run = RunState::new(Instant::now());
+        let old = GameState {
+            global_frame_count: 100,
+            ..GameState::default()
+        };
+        let current = GameState {
+            global_frame_count: 110,
+            in_cutscene: 1,
+            ..old
+        };
+
+        update_game_time(&current, &old, &mut run);
+
+        assert_eq!(run.total_frames, 20);
+    }
 }
