@@ -1,0 +1,17 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+    tags: ["*"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The target (wasm32-unknown-unknown) comes from .cargo/config.toml.
+      - run: cargo build --release --locked
+      - run: cargo clippy --release --locked -- -D warnings
+      - run: cargo fmt --check
