@@ -23,7 +23,7 @@ rustup target add wasm32-unknown-unknown
 cargo build --release
 ```
 
-The output is `target/wasm32-unknown-unknown/release/lsw1_autosplitter.wasm`. Load it in the LiveSplit One OBS plugin's auto splitter settings.
+The output is `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`. Load it in the LiveSplit One OBS plugin's auto splitter settings.
 
 ## Linux: allow OBS to read Dolphin's memory
 
