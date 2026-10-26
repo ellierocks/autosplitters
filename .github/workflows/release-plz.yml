@@ -1,0 +1,25 @@
+name: release-plz
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-plz
+
+jobs:
+  release-plz:
+    # Releases are cut on Forgejo (tags + release PRs); GitHub only receives the finished tags.
+    if: github.server_url != 'https://github.com'
+    runs-on: rust
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GIT_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || github.token }}
+      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: release-plz release --forge gitea --git-token "$GIT_TOKEN" --repo-url "$REPO_URL"
+      - run: release-plz release-pr --forge gitea --git-token "$GIT_TOKEN" --repo-url "$REPO_URL"

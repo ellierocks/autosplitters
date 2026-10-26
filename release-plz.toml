@@ -1,0 +1,6 @@
+[workspace]
+git_only = true             # track releases with git tags; nothing goes to crates.io
+git_release_enable = true
+semver_check = false
+changelog_update = true
+git_tag_name = "v{{ version }}"
