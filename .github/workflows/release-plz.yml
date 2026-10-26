@@ -11,9 +11,6 @@ jobs:
     # Releases are cut on Forgejo (tags + release PRs); GitHub only receives the finished tags.
     if: github.server_url != 'https://github.com'
     runs-on: rust
-    permissions:
-      contents: write
-      pull-requests: write
     env:
       GIT_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || github.token }}
       REPO_URL: ${{ github.server_url }}/${{ github.repository }}
