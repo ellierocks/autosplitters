@@ -172,10 +172,8 @@ fn should_split(s: &Settings, old: &Watched, cur: &Watched) -> bool {
         return true;
     }
     let changed = old.door != cur.door;
-    if s.room {
-        if changed && (door_in(&cur.door, ENTER_DOORS) || door_in(&old.door, LEAVE_DOORS)) {
-            return true;
-        }
+    if s.room && changed && (door_in(&cur.door, ENTER_DOORS) || door_in(&old.door, LEAVE_DOORS)) {
+        return true;
     }
     if s.maul && door_is(&cur.door, b"door_8") && cur.cutscene == 1 {
         return true;
