@@ -21,10 +21,15 @@ Built on the `asr` crate, pinned to a git rev.
 cargo build --release --locked      # .cargo/config.toml defaults the target to wasm32-unknown-unknown
 cargo clippy --release --locked -- -D warnings
 cargo fmt --check
+cargo test --target x86_64-unknown-linux-gnu --locked                     # tests run on the host
+cargo clippy --target x86_64-unknown-linux-gnu --locked --tests -- -D warnings
 ```
 
-Output: `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`. `cargo test` doesn't work as-is, because the
-default target is wasm. Host-side tests need `--target x86_64-unknown-linux-gnu`.
+Output: `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`. A plain `cargo test` fails, because the default
+target is wasm. The no_std lib only links for wasm, so host builds need `--tests`.
+
+The tests check that `ENTER_DOORS`/`LEAVE_DOORS` still match `dolphin.asl`, and check `should_split`'s settings
+and edge cases. When split logic changes, change the ASL parity expectations deliberately.
 
 ## Gotchas
 

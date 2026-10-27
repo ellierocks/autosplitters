@@ -231,3 +231,139 @@ async fn main() {
         timer::pause_game_time();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use super::*;
+    use std::{string::String, vec::Vec};
+
+    fn door(name: &str) -> ArrayCString<16> {
+        let mut bytes = [0u8; 16];
+        bytes[..name.len()].copy_from_slice(name.as_bytes());
+        bytemuck::cast(bytes)
+    }
+
+    fn at(name: &str) -> Watched {
+        Watched {
+            door: door(name),
+            ..Watched::default()
+        }
+    }
+
+    fn settings(room: bool, maul: bool) -> Settings {
+        Settings {
+            newgame: true,
+            maul,
+            room,
+            vader: false,
+            anh: false,
+        }
+    }
+
+    fn names(list: &[&[u8]]) -> Vec<String> {
+        let mut v: Vec<String> = list
+            .iter()
+            .map(|n| String::from_utf8(n.to_vec()).unwrap())
+            .collect();
+        v.sort();
+        v
+    }
+
+    /// The room-split door lists are a hand port of `dolphin.asl`; keep them identical.
+    #[test]
+    fn door_lists_match_dolphin_asl() {
+        let (mut enter, mut leave) = (Vec::new(), Vec::new());
+        for line in include_str!("../dolphin.asl")
+            .lines()
+            .filter(|l| l.contains("settings[\"room\"]"))
+        {
+            let quoted = |key: &str| {
+                line.split(key)
+                    .nth(1)
+                    .and_then(|r| r.split('"').next())
+                    .map(String::from)
+            };
+            if let Some(name) = quoted("current.door == \"") {
+                enter.push(name);
+            } else if let Some(name) = quoted("old.door == \"") {
+                leave.push(name);
+            }
+        }
+        enter.sort();
+        leave.sort();
+        assert_eq!(names(ENTER_DOORS), enter);
+        assert_eq!(names(LEAVE_DOORS), leave);
+        // `read_door` reads 16 bytes, so a longer name could never match.
+        for name in ENTER_DOORS.iter().chain(LEAVE_DOORS) {
+            assert!(name.len() <= 16, "{}", String::from_utf8_lossy(name));
+        }
+    }
+
+    #[test]
+    fn room_splits_follow_the_setting_and_only_fire_on_a_door_change() {
+        let on = settings(true, false);
+        assert!(
+            should_split(&on, &at("door_x"), &at("door_to_hangar")),
+            "entering a listed door"
+        );
+        assert!(
+            !should_split(&on, &at("door_to_hangar"), &at("door_to_hangar")),
+            "no change, no split"
+        );
+        assert!(
+            should_split(&on, &at("door_3"), &at("door_x")),
+            "leaving a listed door"
+        );
+        assert!(
+            !should_split(&on, &at("door_x"), &at("door_y")),
+            "unlisted doors"
+        );
+        assert!(
+            !should_split(
+                &settings(false, false),
+                &at("door_x"),
+                &at("door_to_hangar")
+            ),
+            "setting off"
+        );
+    }
+
+    #[test]
+    fn status_and_outro_splits() {
+        let off = settings(false, false);
+        let (idle, finished) = (
+            Watched {
+                status: 0,
+                ..at("x")
+            },
+            Watched {
+                status: 1,
+                ..at("x")
+            },
+        );
+        assert!(
+            should_split(&off, &idle, &finished),
+            "status 0 -> 1 always splits"
+        );
+        assert!(!should_split(&off, &finished, &finished));
+
+        let outro = Watched {
+            cutscene: 1,
+            ..at("door_8")
+        };
+        assert!(
+            should_split(&settings(false, true), &at("door_8"), &outro),
+            "Maul outro with the setting on"
+        );
+        assert!(
+            !should_split(&off, &at("door_8"), &outro),
+            "Maul outro with the setting off"
+        );
+        assert!(
+            !should_split(&settings(false, true), &at("door_8"), &at("door_8")),
+            "door_8 without the cutscene"
+        );
+    }
+}
