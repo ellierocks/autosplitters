@@ -4,3 +4,16 @@ git_release_enable = true
 semver_check = false
 changelog_update = true
 git_tag_name = "v{{ version }}"
+release_commits = "^(feat|fix|perf|refactor)"   # docs/ci/chore-only changes don't cut a release
+
+[changelog]
+# release-plz's default parsers, plus skipping merge commits so PR and branch merges stay out of the changelog.
+commit_parsers = [
+    { message = "^Merge ", skip = true },
+    { message = "^feat", group = "added" },
+    { message = "^changed", group = "changed" },
+    { message = "^deprecated", group = "deprecated" },
+    { message = "^fix", group = "fixed" },
+    { message = "^security", group = "security" },
+    { message = "^.*", group = "other" },
+]
