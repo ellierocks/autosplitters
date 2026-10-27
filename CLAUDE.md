@@ -25,6 +25,8 @@ cargo test --target x86_64-unknown-linux-gnu --locked                     # test
 cargo clippy --target x86_64-unknown-linux-gnu --locked --tests -- -D warnings
 ```
 
+The Rust toolchain is pinned in `rust-toolchain.toml`; Renovate bumps it.
+
 Output: `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`. A plain `cargo test` fails, because the default
 target is wasm. The no_std lib only links for wasm, so host builds need `--tests`.
 
