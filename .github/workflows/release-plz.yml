@@ -19,8 +19,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_PLZ_TOKEN || github.token }}
       - run: |
           git config user.name "release-plz"
           git config user.email "release-plz@localhost"
+          # `--git-token` only authenticates the forge API. release-plz clones into
+          # a temp dir and pushes the release branch/tags with plain `git push`, so
+          # git needs the token too. The global helper is inherited by that clone.
+          git config --global credential.helper \
+            '!f() { echo username=release-plz; echo "password=$GIT_TOKEN"; }; f'
       - run: release-plz release --forge gitea --git-token "$GIT_TOKEN" --repo-url "$REPO_URL"
       - run: release-plz release-pr --forge gitea --git-token "$GIT_TOKEN" --repo-url "$REPO_URL"

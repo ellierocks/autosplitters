@@ -55,6 +55,10 @@ from when this repo was `lsw1-wasm` are kept, with `lsw1-v` copies), and its cha
 sadx's tags are `sadx-vX.Y.Z`; 0.1.0 was released from the old repo and has no tag here (a tag on the imported
 commits breaks release-plz, which needs the workspace root), so its first release here is 0.2.0.
 
+`release-plz.yml` passes the token to the forge API via `--git-token`, but release-plz pushes its release branch and
+tags with plain `git push` from a temp clone, so the job also installs a `credential.helper` that hands git the same
+token. Without it the push dies with `could not read Username for 'http://localhost:3000'`.
+
 `release.yml` runs on each forge for those tags: it builds that splitter's `.wasm`, plus any `.asl` in its dir (lsw1's
 `dolphin.asl`), and attaches them to the Forgejo release; on GitHub (the public push mirror,
 `github.com/ellierocks/autosplitters`) it publishes a GitHub release with the changelog section as notes. Forgejo is
