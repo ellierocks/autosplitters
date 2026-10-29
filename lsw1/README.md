@@ -12,7 +12,9 @@ A port of the Dolphin `dolphin.asl` autosplitter to a LiveSplit One auto splitti
 | End on Darth Vader Outro (All Minikits) | off | Final split for All Minikits |
 | End on A New Hope Outro (100% NSR) | off | Final split for 100% NSR |
 
-The timer also splits when `status` goes 0 to 1, and resets when `gamestate` is 124.
+The timer also splits when `status` goes 0 to 1, and resets when `gamestate` is 124. One exception: podrace raises
+`status` at each of the two crossings of the third lap door, so those rises are ignored while the door reads `door_A`
+or `door_B`.
 
 ## Build
 
@@ -59,4 +61,5 @@ It attaches to a process named `dolphin-emu` (or one of the Windows names), then
 
 ## Status
 
-Attaching, auto start and the first split are confirmed working. Reset, room splits and the ending splits are untested.
+Attaching, auto start and the first split are confirmed working. Reset, room splits, the ending splits and the podrace
+status-split suppression are untested.
