@@ -1,6 +1,0 @@
-/target
-
-!.cargo/
-!.cargo/config.toml
-
-.opencode/

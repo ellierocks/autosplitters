@@ -5,6 +5,8 @@ One's auto-splitting runtime, so it runs in the OBS LiveSplit One plugin on Linu
 
 - `lsw1/` (crate `lsw1_wasm`): LEGO Star Wars 1 (GameCube, under Dolphin). A port of `dolphin.asl`, the original
   LiveSplit script kept in `lsw1/` as the reference for addresses and split logic.
+- `sadx/` (crate `sadx-livesplit-one`): Sonic Adventure DX (PC). A port of Sora-yx's desktop ASL; folded in from the
+  old GitHub repo `ellierocks/sadx-livesplit-one` with its history on 2026-10-29.
 
 ## Layout
 
@@ -20,7 +22,12 @@ target to `wasm32-unknown-unknown`) at the root. Each splitter has its own dir w
 - `find_ram`/`attach`, which locate Dolphin's MEM1 in the process.
 - `should_split`, the split decision: old state compared with new state.
 
-Built on the `asr` crate, pinned to a git rev.
+### sadx (all in `sadx/src/lib.rs`)
+- Memory offsets from the game module (`GLOBAL_FRAME_COUNT`, `GAME_MODE`, ...), read through `read_state`.
+- Frame-counted game time; pre-rendered movies are timed with a wall clock (`clock::Instant`).
+- `should_start`, `should_reset`, `should_split`.
+
+Both are built on the `asr` crate, pinned to the same git rev.
 
 ## Commands (what CI runs, from the repo root)
 
@@ -34,9 +41,9 @@ cargo clippy --workspace --target x86_64-unknown-linux-gnu --locked --tests -- -
 
 The Rust toolchain is pinned in `rust-toolchain.toml`; Renovate bumps it.
 
-Output: `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm` (the path is unchanged from before the monorepo). A
-plain `cargo test` fails, because the default target is wasm. The no_std lib only links for wasm, so host builds need
-`--tests`.
+Output: `target/wasm32-unknown-unknown/release/<crate>.wasm` (`lsw1_wasm.wasm`, unchanged from before the monorepo,
+and `sadx_livesplit_one.wasm`). A plain `cargo test` fails, because the default target is wasm. The no_std libs only
+link for wasm, so host builds need `--tests`.
 
 The lsw1 tests check that `ENTER_DOORS`/`LEAVE_DOORS` still match `lsw1/dolphin.asl`, and check `should_split`'s
 settings and edge cases. When split logic changes, change the ASL parity expectations deliberately.
@@ -45,6 +52,11 @@ settings and edge cases. When split logic changes, change the ASL parity expecta
 
 release-plz cuts a release per splitter from Conventional Commits. lsw1's tags are `lsw1-vX.Y.Z` (older `vX.Y.Z` tags
 from when this repo was `lsw1-wasm` are kept, with `lsw1-v` copies), and its changelog is `lsw1/CHANGELOG.md`.
+sadx's tags are `sadx-vX.Y.Z` (`sadx-v0.1.0` marks the imported commit the old repo released as `0.1.0`).
+
+`release.yml` runs on each forge for those tags: it builds that splitter's `.wasm` and attaches it to the Forgejo
+release, and on GitHub (the public push mirror, `github.com/ellierocks/autosplitters`) publishes a GitHub release with
+the changelog section as notes. Forgejo is the home; never push to GitHub directly.
 
 ## Gotchas
 
@@ -54,3 +66,5 @@ from when this repo was `lsw1-wasm` are kept, with `lsw1-v` copies), and its cha
 - On Linux the splitter needs ptrace permission on the OBS binary (see `lsw1/README.md`). "Waiting to attach" with no
   error is usually that.
 - A real run needs Dolphin, the game and OBS, so ask the user to test splits live.
+- sadx imports WASI's `clock_time_get` itself, because asr's `Instant` exists only on the WASI target while the
+  workspace builds `wasm32-unknown-unknown`. LiveSplit One's runtime links WASI for any module importing it.

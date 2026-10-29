@@ -22,3 +22,8 @@ commit_parsers = [
 [[package]]
 name = "lsw1_wasm"
 git_tag_name = "lsw1-v{{ version }}"
+
+# Keep the crate name (so the build stays sadx_livesplit_one.wasm) with short sadx-v tags.
+[[package]]
+name = "sadx-livesplit-one"
+git_tag_name = "sadx-v{{ version }}"

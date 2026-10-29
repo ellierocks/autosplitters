@@ -3,18 +3,9 @@ name = "sadx-livesplit-one"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-asr = { git = "https://github.com/LiveSplit/asr", features = ["derive"] }
-bytemuck = { version = "1", features = ["derive"] }
-
 [lib]
 crate-type = ["cdylib"]
 
-[profile.release]
-lto = true
-panic = "abort"
-codegen-units = 1
-strip = true
-
-[profile.release.build-override]
-opt-level = 0
+[dependencies]
+asr = { git = "https://github.com/LiveSplit/asr", rev = "06f244ead9d700618b5bd22b0ddb334c0c791b57", features = ["derive"] }
+bytemuck = { version = "1", features = ["derive"] }

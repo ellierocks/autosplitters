@@ -13,9 +13,43 @@ use asr::{
 use bytemuck::Pod;
 
 #[cfg(not(test))]
-use asr::time_util::Instant;
+use clock::Instant;
 #[cfg(test)]
 use std::time::Instant;
+
+/// Monotonic wall-clock time for timing pre-rendered movies, when the game's frame counters stop.
+///
+/// asr only has an `Instant` on the WASI target, but the workspace builds for `wasm32-unknown-unknown`. LiveSplit
+/// One's runtime links WASI preview 1 for any module that imports from it, so this imports the one call asr's
+/// WASI `Instant` makes.
+#[cfg(not(test))]
+mod clock {
+    use core::time::Duration;
+
+    #[link(wasm_import_module = "wasi_snapshot_preview1")]
+    extern "C" {
+        fn clock_time_get(id: u32, precision: u64, time: *mut u64) -> u16;
+    }
+
+    const CLOCKID_MONOTONIC: u32 = 1;
+
+    #[derive(Clone, Copy)]
+    pub struct Instant(u64);
+
+    impl Instant {
+        pub fn now() -> Self {
+            let mut nanos = 0;
+            // SAFETY: `nanos` is a valid u64 for the call to write; the runtime always provides this import.
+            let errno = unsafe { clock_time_get(CLOCKID_MONOTONIC, 1, &mut nanos) };
+            assert_eq!(errno, 0, "clock_time_get failed");
+            Self(nanos)
+        }
+
+        pub fn duration_since(&self, earlier: Self) -> Duration {
+            Duration::from_nanos(self.0.saturating_sub(earlier.0))
+        }
+    }
+}
 
 asr::async_main!(stable);
 asr::panic_handler!();

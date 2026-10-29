@@ -2,8 +2,6 @@
 
 ![sadx-livesplit-one example](assets/example.png)
 
-Version: `0.1.0`
-
 LiveSplit One compatible alternative to Sora-yx's desktop LiveSplit ASL autosplitter from [`Sora-yx/autosplitters`](https://github.com/Sora-yx/autosplitters).
 
 Credit to Sora-yx and the earlier Sonic Adventure DX autosplitter contributors whose ASL logic this port is based on:
@@ -26,43 +24,24 @@ This port targets LiveSplit One's Auto Splitting Runtime (`asr`) instead of ASL.
 
 ## Install
 
-Download `sadx_livesplit_one.wasm` from the release assets and add it as the autosplitter in LiveSplit One.
+Download `sadx_livesplit_one.wasm` from the latest `sadx-v*` release of
+[ellierocks/autosplitters](https://github.com/ellierocks/autosplitters/releases) and add it as the autosplitter in
+LiveSplit One. Versions up to 0.1.0 were released from the old `sadx-livesplit-one` repository.
 
 ## Build
 
-Requires the Rust `wasm32-wasip1` target:
+From the repository root (the workspace defaults the target to `wasm32-unknown-unknown`):
 
 ```sh
-rustup target add wasm32-wasip1
+cargo build --release -p sadx-livesplit-one
 ```
 
-Build the release WebAssembly module with:
+The output is `target/wasm32-unknown-unknown/release/sadx_livesplit_one.wasm`.
 
-```sh
-cargo build --release
-```
-
-The repository's Cargo config targets `wasm32-wasip1` by default, so no extra target flag is needed. You can also use the shorter alias:
-
-```sh
-cargo b
-```
-
-The output is:
-
-`target/wasm32-wasip1/release/sadx_livesplit_one.wasm`
+The splitter times pre-rendered movies with a wall clock. asr only provides one on the WASI target, so `src/lib.rs`
+imports WASI's `clock_time_get` directly; LiveSplit One's runtime provides it to any module that imports it (and logs
+that the splitter uses WASI).
 
 ## Releases
 
-Every push to `main` builds `target/wasm32-wasip1/release/sadx_livesplit_one.wasm` and publishes it to the GitHub release whose tag matches the package version in `Cargo.toml`.
-
-For example, version `0.1.0` publishes to tag/release `0.1.0`. If more commits are pushed without changing the version, the workflow moves that version tag to the latest `main` commit and replaces the release asset.
-
-## Manual Release Checklist
-
-- Run `cargo fmt --check`.
-- Run `cargo check --release`.
-- Run `cargo clippy --release -- -D warnings`.
-- Run `cargo test --no-run`.
-- Run `cargo build --release`.
-- Attach `target/wasm32-wasip1/release/sadx_livesplit_one.wasm` to the GitHub release.
+release-plz cuts `sadx-vX.Y.Z` releases from Conventional Commits, and the release workflow attaches the `.wasm`.
