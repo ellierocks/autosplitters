@@ -3,8 +3,8 @@
 Monorepo for my autosplitters. Each splitter is a Cargo workspace member that compiles to WebAssembly for LiveSplit
 One's auto-splitting runtime, so it runs in the OBS LiveSplit One plugin on Linux.
 
-- `lsw1/` (crate `lsw1_wasm`): LEGO Star Wars 1 (GameCube, under Dolphin). A port of `dolphin.asl`, the original
-  LiveSplit script kept in `lsw1/` as the reference for addresses and split logic.
+- `lsw1/` (crate `lsw1_wasm`): LEGO Star Wars 1 (GameCube, under Dolphin). Ships two supported autosplitters kept in
+  sync: `lsw1/dolphin.asl` for desktop LiveSplit, and the wasm port in `lsw1/src/lib.rs` for LiveSplit One.
 - `sadx/` (crate `sadx-livesplit-one`): Sonic Adventure DX (PC). A port of Sora-yx's desktop ASL; folded in from the
   old GitHub repo `ellierocks/sadx-livesplit-one` with its history on 2026-10-29.
 
@@ -45,8 +45,8 @@ Output: `target/wasm32-unknown-unknown/release/<crate>.wasm` (`lsw1_wasm.wasm`, 
 and `sadx_livesplit_one.wasm`). A plain `cargo test` fails, because the default target is wasm. The no_std libs only
 link for wasm, so host builds need `--tests`.
 
-The lsw1 tests check that `ENTER_DOORS`/`LEAVE_DOORS` still match `lsw1/dolphin.asl`, and check `should_split`'s
-settings and edge cases. When split logic changes, change the ASL parity expectations deliberately.
+The lsw1 tests check that `ENTER_DOORS`/`LEAVE_DOORS`/`PODRACE_DOORS` still match `lsw1/dolphin.asl`, and check
+`should_split`'s settings and edge cases. When split logic changes, change the ASL parity expectations deliberately.
 
 ## Release
 
@@ -55,14 +55,15 @@ from when this repo was `lsw1-wasm` are kept, with `lsw1-v` copies), and its cha
 sadx's tags are `sadx-vX.Y.Z`; 0.1.0 was released from the old repo and has no tag here (a tag on the imported
 commits breaks release-plz, which needs the workspace root), so its first release here is 0.2.0.
 
-`release.yml` runs on each forge for those tags: it builds that splitter's `.wasm` and attaches it to the Forgejo
-release, and on GitHub (the public push mirror, `github.com/ellierocks/autosplitters`) publishes a GitHub release with
-the changelog section as notes. Forgejo is the home; never push to GitHub directly.
+`release.yml` runs on each forge for those tags: it builds that splitter's `.wasm`, plus any `.asl` in its dir (lsw1's
+`dolphin.asl`), and attaches them to the Forgejo release; on GitHub (the public push mirror,
+`github.com/ellierocks/autosplitters`) it publishes a GitHub release with the changelog section as notes. Forgejo is
+the home; never push to GitHub directly.
 
 ## Gotchas
 
-- lsw1 behaviour must match `lsw1/dolphin.asl`. When changing split logic, check the matching ASL lines and say where
-  they differ on purpose.
+- lsw1 ships both a supported ASL and a supported wasm, so its split logic must match `lsw1/dolphin.asl`. Change the
+  ASL and the Rust together, and say where they differ on purpose.
 - GameCube memory is big-endian, so reads go through `FromEndian`.
 - On Linux the splitter needs ptrace permission on the OBS binary (see `lsw1/README.md`). "Waiting to attach" with no
   error is usually that.

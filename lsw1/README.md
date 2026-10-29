@@ -1,6 +1,20 @@
-# LEGO Star Wars 1 (GameCube) autosplitter, WASM
+# LEGO Star Wars 1 (GameCube) autosplitter
 
-A port of the Dolphin `dolphin.asl` autosplitter to a LiveSplit One auto splitting runtime (WebAssembly), so it works on Linux with the OBS LiveSplit One plugin.
+Two supported autosplitters for LEGO Star Wars: The Video Game on GameCube under Dolphin, kept in sync:
+
+- `dolphin.asl` — the original LiveSplit ASL script, for desktop LiveSplit.
+- `src/lib.rs` — the LiveSplit One port (WebAssembly), for the OBS LiveSplit One plugin on Linux.
+
+Both read the same memory addresses and make the same split decisions, so a run splits identically either way. Split
+logic changes go into both.
+
+## Install
+
+Desktop LiveSplit: add [`dolphin.asl`](dolphin.asl) as an auto splitter. The script loads the emulator helper as
+`Components/emu-help-v2.dll`, so that file has to be in LiveSplit's `Components` folder.
+
+LiveSplit One (including the OBS plugin): build the `.wasm` below, or download it from the latest `lsw1-v*` release, and
+load it in the auto splitter settings.
 
 ## Settings
 
@@ -12,7 +26,9 @@ A port of the Dolphin `dolphin.asl` autosplitter to a LiveSplit One auto splitti
 | End on Darth Vader Outro (All Minikits) | off | Final split for All Minikits |
 | End on A New Hope Outro (100% NSR) | off | Final split for 100% NSR |
 
-The timer also splits when `status` goes 0 to 1, and resets when `gamestate` is 124.
+The timer also splits when `status` goes 0 to 1, and resets when `gamestate` is 124. One exception: podrace raises
+`status` at each of the two crossings of the third lap door, so those rises are ignored while the door reads `door_A`
+or `door_B`, and on the tick where it clears from one of those to nothing.
 
 ## Build
 
@@ -23,7 +39,7 @@ rustup target add wasm32-unknown-unknown
 cargo build --release -p lsw1_wasm
 ```
 
-From the repo root, the output is `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`. Load it in the LiveSplit One OBS plugin's auto splitter settings.
+From the repo root, the output is `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`.
 
 ## Linux: allow OBS to read Dolphin's memory
 
@@ -59,4 +75,5 @@ It attaches to a process named `dolphin-emu` (or one of the Windows names), then
 
 ## Status
 
-Attaching, auto start and the first split are confirmed working. Reset, room splits and the ending splits are untested.
+Attaching, auto start and the first split are confirmed working. Reset, room splits, the ending splits and the podrace
+status-split suppression are untested.

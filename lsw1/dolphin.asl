@@ -25,7 +25,7 @@ start {
 }
 
 split {
-    if (old.status == 0 && current.status == 1) return true;
+    if (old.status == 0 && current.status == 1 && current.door != "door_A" && current.door != "door_B" && !(current.door == "" && (old.door == "door_A" || old.door == "door_B"))) return true;
     if (settings["room"] && current.door == "door_to_hangar" && old.door != current.door) return true;
     if (settings["room"] && current.door == "door_into_ruins1" && old.door != current.door) return true;
     if (settings["room"] && current.door == "door_into_ruins2" && old.door != current.door) return true;

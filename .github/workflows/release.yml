@@ -1,8 +1,8 @@
 name: release
 
 # release-plz creates the tag (<splitter>-v<version>), the Forgejo release and its changelog notes. The push mirror
-# carries the tag to GitHub. On each forge this job builds that splitter's .wasm and puts it on the release: attached
-# to the Forgejo release, and as a new GitHub release with the same changelog notes.
+# carries the tag to GitHub. On each forge this job builds that splitter's .wasm (plus its .asl, if it ships one) and
+# puts them on the release: attached to the Forgejo release, and as a new GitHub release with the same changelog notes.
 on:
   push:
     tags: ["lsw1-v*", "sadx-v*"]
@@ -24,11 +24,22 @@ jobs:
           cargo build --release --locked -p "$crate"
           wasm="target/wasm32-unknown-unknown/release/$(echo "$crate" | tr - _).wasm"
           cp "$wasm" .
-          sha256sum "$(basename "$wasm")" > "$(basename "$wasm").sha256"
+          files=$(basename "$wasm")
+          # A splitter may also ship the ASL it was ported from; lsw1 supports both.
+          for asl in "$dir"/*.asl; do
+            [ -e "$asl" ] || continue
+            cp "$asl" .
+            files="$files $(basename "$asl")"
+          done
+          sums=""
+          for f in $files; do
+            sha256sum "$f" > "$f.sha256"
+            sums="$sums $f.sha256"
+          done
           # This version's section of the splitter's changelog, for the GitHub release notes.
           awk -v head="## [$version]" 'index($0, "## [") == 1 { if (p) exit; p = index($0, head) == 1; next } p' \
             "$dir/CHANGELOG.md" > notes.md
-          echo "files=$(basename "$wasm") $(basename "$wasm").sha256" >> "$GITHUB_ENV"
+          echo "files=$files$sums" >> "$GITHUB_ENV"
       - name: Attach to the Forgejo release
         if: github.server_url != 'https://github.com'
         run: |
