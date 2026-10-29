@@ -52,7 +52,8 @@ settings and edge cases. When split logic changes, change the ASL parity expecta
 
 release-plz cuts a release per splitter from Conventional Commits. lsw1's tags are `lsw1-vX.Y.Z` (older `vX.Y.Z` tags
 from when this repo was `lsw1-wasm` are kept, with `lsw1-v` copies), and its changelog is `lsw1/CHANGELOG.md`.
-sadx's tags are `sadx-vX.Y.Z` (`sadx-v0.1.0` marks the imported commit the old repo released as `0.1.0`).
+sadx's tags are `sadx-vX.Y.Z`; 0.1.0 was released from the old repo and has no tag here (a tag on the imported
+commits breaks release-plz, which needs the workspace root), so its first release here is 0.2.0.
 
 `release.yml` runs on each forge for those tags: it builds that splitter's `.wasm` and attaches it to the Forgejo
 release, and on GitHub (the public push mirror, `github.com/ellierocks/autosplitters`) publishes a GitHub release with
