@@ -1,0 +1,58 @@
+name: release
+
+# release-plz creates the tag (<splitter>-v<version>), the Forgejo release and its changelog notes. The push mirror
+# carries the tag to GitHub. On each forge this job builds that splitter's .wasm and puts it on the release: attached
+# to the Forgejo release, and as a new GitHub release with the same changelog notes.
+on:
+  push:
+    tags: ["lsw1-v*", "sadx-v*"]
+
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        run: |
+          dir="${GITHUB_REF_NAME%-v*}"
+          version="${GITHUB_REF_NAME##*-v}"
+          crate=$(sed -n 's/^name = "\(.*\)"/\1/p' "$dir/Cargo.toml" | head -n 1)
+          cargo build --release --locked -p "$crate"
+          wasm="target/wasm32-unknown-unknown/release/$(echo "$crate" | tr - _).wasm"
+          cp "$wasm" .
+          sha256sum "$(basename "$wasm")" > "$(basename "$wasm").sha256"
+          # This version's section of the splitter's changelog, for the GitHub release notes.
+          awk -v head="## [$version]" 'index($0, "## [") == 1 { if (p) exit; p = index($0, head) == 1; next } p' \
+            "$dir/CHANGELOG.md" > notes.md
+          echo "files=$(basename "$wasm") $(basename "$wasm").sha256" >> "$GITHUB_ENV"
+      - name: Attach to the Forgejo release
+        if: github.server_url != 'https://github.com'
+        run: |
+          api="$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY"
+          # The tag push can start this job before release-plz has created the release, so wait for it.
+          id=""
+          for _ in $(seq 1 36); do
+            id=$(curl -fsS -H "Authorization: token $TOKEN" "$api/releases/tags/$GITHUB_REF_NAME" \
+              | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])') && break
+            sleep 5
+          done
+          [ -n "$id" ] || { echo "no release found for $GITHUB_REF_NAME" >&2; exit 1; }
+          for f in $files; do
+            curl -fsS -H "Authorization: token $TOKEN" -F "attachment=@$f" "$api/releases/$id/assets?name=$f" > /dev/null
+            echo "attached $f"
+          done
+      - name: Publish the GitHub release
+        if: github.server_url == 'https://github.com'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # shellcheck disable=SC2086 # $files is a space-separated list of file names
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" $files --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" $files --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md
+          fi
