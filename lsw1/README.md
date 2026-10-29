@@ -28,7 +28,7 @@ load it in the auto splitter settings.
 
 The timer also splits when `status` goes 0 to 1, and resets when `gamestate` is 124. One exception: podrace raises
 `status` at each of the two crossings of the third lap door, so those rises are ignored while the door reads `door_A`
-or `door_B`.
+or `door_B`, and on the tick where it clears from one of those to nothing.
 
 ## Build
 

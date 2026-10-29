@@ -89,8 +89,9 @@ const ENTER_DOORS: &[&[u8]] = &[
 
 /// Podrace lap doors. Finishing the race means crossing the third lap door twice,
 /// and each crossing briefly raises `status` before the level actually ends. The
-/// door reads `door_A`/`door_B` at those moments, so a `status` rise seen while
-/// the door is one of these is ignored instead of firing two extra splits.
+/// door reads `door_A`/`door_B` when the lap door is hit and clears to nothing
+/// right after, so a `status` rise during either is ignored instead of firing two
+/// extra splits.
 const PODRACE_DOORS: &[&[u8]] = &[b"door_A", b"door_B"];
 
 /// Doors where leaving them (the door string changing away from them) splits.
@@ -173,8 +174,14 @@ fn door_in(door: &ArrayCString<16>, set: &[&[u8]]) -> bool {
     set.iter().any(|n| door_is(door, n))
 }
 
+/// Whether a `status` rise seen between these two states belongs to a podrace lap
+/// door instead of the level end: the door is a lap door, or it just cleared.
+fn podrace_lap_door(old: &Watched, cur: &Watched) -> bool {
+    door_in(&cur.door, PODRACE_DOORS) || (door_in(&old.door, PODRACE_DOORS) && cur.door.is_empty())
+}
+
 fn should_split(s: &Settings, old: &Watched, cur: &Watched) -> bool {
-    if old.status == 0 && cur.status == 1 && !door_in(&cur.door, PODRACE_DOORS) {
+    if old.status == 0 && cur.status == 1 && !podrace_lap_door(old, cur) {
         return true;
     }
     let changed = old.door != cur.door;
@@ -344,12 +351,14 @@ mod tests {
             .find(|l| l.contains("old.status == 0") && l.contains("current.status == 1"))
             .expect("the status split line in dolphin.asl");
         let mut expected: Vec<String> = line
-            .split("current.door != \"")
+            .split('"')
             .skip(1)
-            .filter_map(|r| r.split('"').next())
+            .step_by(2)
+            .filter(|s| !s.is_empty())
             .map(String::from)
             .collect();
         expected.sort();
+        expected.dedup();
         assert_eq!(names(PODRACE_DOORS), expected);
     }
 
@@ -369,10 +378,18 @@ mod tests {
                 !should_split(&off, &idle(podrace), &finished(podrace)),
                 "{podrace}: crossing the third lap door is not the level end"
             );
+            assert!(
+                !should_split(&off, &idle(podrace), &finished("")),
+                "{podrace}: clearing the door right after the lap door is not the level end either"
+            );
         }
         assert!(
             should_split(&off, &idle(""), &finished("")),
             "the real level end still splits once the door is clear"
+        );
+        assert!(
+            should_split(&off, &at("door_x"), &finished("door_y")),
+            "a status rise elsewhere still splits"
         );
     }
 
