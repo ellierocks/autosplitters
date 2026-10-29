@@ -3,7 +3,7 @@ git_only = true             # track releases with git tags; nothing goes to crat
 git_release_enable = true
 semver_check = false
 changelog_update = true
-git_tag_name = "v{{ version }}"
+git_tag_name = "{{ package }}-v{{ version }}"
 release_commits = "^(feat|fix|perf|refactor)"   # docs/ci/chore-only changes don't cut a release
 
 [changelog]
@@ -17,3 +17,8 @@ commit_parsers = [
     { message = "^security", group = "security" },
     { message = "^.*", group = "other" },
 ]
+
+# Keep the pre-monorepo tag style (lsw1-v0.1.1) rather than lsw1_wasm-v0.1.1.
+[[package]]
+name = "lsw1_wasm"
+git_tag_name = "lsw1-v{{ version }}"
