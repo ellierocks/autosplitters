@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+
+      - name: Build WebAssembly module
+        run: cargo build --release
+
+      - name: Read package version
+        id: version
+        run: |
+          version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Move version tag to this commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --force "${{ steps.version.outputs.tag }}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${{ steps.version.outputs.tag }}" --force
+
+      - name: Publish release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ARTIFACT: target/wasm32-wasip1/release/sadx_livesplit_one.wasm
+        run: |
+          notes="Automated LiveSplit One WebAssembly build for version ${VERSION} at ${GITHUB_SHA}."
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release edit "${TAG}" --title "${VERSION}" --notes "${notes}" --target "${GITHUB_SHA}"
+            gh release upload "${TAG}" "${ARTIFACT}" --clobber
+          else
+            gh release create "${TAG}" "${ARTIFACT}" --title "${VERSION}" --notes "${notes}" --target "${GITHUB_SHA}"
+          fi
