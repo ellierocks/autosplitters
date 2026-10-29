@@ -1,6 +1,20 @@
-# LEGO Star Wars 1 (GameCube) autosplitter, WASM
+# LEGO Star Wars 1 (GameCube) autosplitter
 
-A port of the Dolphin `dolphin.asl` autosplitter to a LiveSplit One auto splitting runtime (WebAssembly), so it works on Linux with the OBS LiveSplit One plugin.
+Two supported autosplitters for LEGO Star Wars: The Video Game on GameCube under Dolphin, kept in sync:
+
+- `dolphin.asl` — the original LiveSplit ASL script, for desktop LiveSplit.
+- `src/lib.rs` — the LiveSplit One port (WebAssembly), for the OBS LiveSplit One plugin on Linux.
+
+Both read the same memory addresses and make the same split decisions, so a run splits identically either way. Split
+logic changes go into both.
+
+## Install
+
+Desktop LiveSplit: add [`dolphin.asl`](dolphin.asl) as an auto splitter. The script loads the emulator helper as
+`Components/emu-help-v2.dll`, so that file has to be in LiveSplit's `Components` folder.
+
+LiveSplit One (including the OBS plugin): build the `.wasm` below, or download it from the latest `lsw1-v*` release, and
+load it in the auto splitter settings.
 
 ## Settings
 
@@ -25,7 +39,7 @@ rustup target add wasm32-unknown-unknown
 cargo build --release -p lsw1_wasm
 ```
 
-From the repo root, the output is `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`. Load it in the LiveSplit One OBS plugin's auto splitter settings.
+From the repo root, the output is `target/wasm32-unknown-unknown/release/lsw1_wasm.wasm`.
 
 ## Linux: allow OBS to read Dolphin's memory
 
