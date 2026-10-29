@@ -1,15 +1,6 @@
-[package]
-name = "lsw1_wasm"
-version = "0.1.1"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-asr = { git = "https://github.com/LiveSplit/asr", rev = "06f244ead9d700618b5bd22b0ddb334c0c791b57", features = ["derive", "flags"] }
-
-bytemuck = { version = "1", features = ["min_const_generics"] }
+[workspace]
+resolver = "3"
+members = ["lsw1"]
 
 [profile.release]
 lto = true
