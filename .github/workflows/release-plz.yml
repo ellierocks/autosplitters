@@ -14,18 +14,11 @@ permissions:
 jobs:
   release-plz:
     runs-on: ubuntu-latest
-    env:
-      GIT_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN || github.token }}
-      - run: |
-          git config user.name "release-plz"
-          git config user.email "release-plz@localhost"
-          # release-plz clones into a temp dir and pushes with plain `git push`, so git needs the token too.
-          git config --global credential.helper \
-            '!f() { echo username=release-plz; echo "password=$GIT_TOKEN"; }; f'
-      - run: release-plz release --git-token "$GIT_TOKEN"
-      - run: release-plz release-pr --git-token "$GIT_TOKEN"
+      - uses: release-plz/action@v0.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || github.token }}
