@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.1](https://localhost:3000/ellie/autosplitters/compare/lsw1-v0.2.0...lsw1-v0.2.1) - 2026-10-29
+## [0.2.1](https://github.com/ellierocks/autosplitters/compare/lsw1-v0.2.0...lsw1-v0.2.1) - 2026-10-29
 
 ### Fixed
 
@@ -18,13 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - present lsw1's ASL as a supported autosplitter
 
-## [0.2.0](https://localhost:3000/ellie/autosplitters/compare/lsw1-v0.1.1...lsw1-v0.2.0) - 2026-10-29
+## [0.2.0](https://github.com/ellierocks/autosplitters/compare/lsw1-v0.1.1...lsw1-v0.2.0) - 2026-10-29
 
 ### Other
 
 - [**breaking**] turn the repo into a monorepo of autosplitters
 
-## [0.1.1](https://localhost:3000/ellie/lsw1-wasm/compare/v0.1.0...v0.1.1) - 2026-10-26
+## [0.1.1](https://github.com/ellierocks/autosplitters/compare/v0.1.0...v0.1.1) - 2026-10-26
 
 ### Fixed
 

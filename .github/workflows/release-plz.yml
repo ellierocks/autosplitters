@@ -7,14 +7,15 @@ on:
 concurrency:
   group: release-plz
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release-plz:
-    # Releases are cut on Forgejo (tags + release PRs); GitHub only receives the finished tags.
-    if: github.server_url != 'https://github.com'
-    runs-on: rust
+    runs-on: ubuntu-latest
     env:
       GIT_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || github.token }}
-      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -23,10 +24,8 @@ jobs:
       - run: |
           git config user.name "release-plz"
           git config user.email "release-plz@localhost"
-          # `--git-token` only authenticates the forge API. release-plz clones into
-          # a temp dir and pushes the release branch/tags with plain `git push`, so
-          # git needs the token too. The global helper is inherited by that clone.
+          # release-plz clones into a temp dir and pushes with plain `git push`, so git needs the token too.
           git config --global credential.helper \
             '!f() { echo username=release-plz; echo "password=$GIT_TOKEN"; }; f'
-      - run: release-plz release --forge gitea --git-token "$GIT_TOKEN" --repo-url "$REPO_URL"
-      - run: release-plz release-pr --forge gitea --git-token "$GIT_TOKEN" --repo-url "$REPO_URL"
+      - run: release-plz release --git-token "$GIT_TOKEN"
+      - run: release-plz release-pr --git-token "$GIT_TOKEN"
