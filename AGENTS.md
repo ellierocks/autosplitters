@@ -1,75 +1,37 @@
 # autosplitters
 
-Monorepo for my autosplitters. Each splitter is a Cargo workspace member that compiles to WebAssembly for LiveSplit
-One's auto-splitting runtime, so it runs in the OBS LiveSplit One plugin on Linux.
+Cargo workspace of WebAssembly autosplitters for LiveSplit One in OBS on Linux.
 
-- `lsw1/` (crate `lsw1_wasm`): LEGO Star Wars 1 (GameCube, under Dolphin). Ships two supported autosplitters kept in
-  sync: `lsw1/dolphin.asl` for desktop LiveSplit, and the wasm port in `lsw1/src/lib.rs` for LiveSplit One.
-- `sadx/` (crate `sadx-livesplit-one`): Sonic Adventure DX (PC). A port of Sora-yx's desktop ASL; folded in from the
-  old GitHub repo `ellierocks/sadx-livesplit-one` with its history on 2026-10-29.
+## Navigation
 
-## Layout
+- [README](README.md): splitters, build outputs and downloads.
+- [lsw1 setup](lsw1/README.md): LEGO Star Wars 1 on Dolphin; supported desktop
+  `lsw1/dolphin.asl` and wasm `lsw1/src/lib.rs`.
+- [sadx setup](sadx/README.md): Sonic Adventure DX PC; wasm `sadx/src/lib.rs`.
+- [Development reference](docs/development.md): module maps, workspace layout,
+  adding splitters, test coverage and release procedures/history. Read it for those tasks.
 
-One `Cargo.lock`, `target/`, `rust-toolchain.toml`, release `[profile]` and `.cargo/config.toml` (defaults the build
-target to `wasm32-unknown-unknown`) at the root. Each splitter has its own dir with `Cargo.toml`, `README.md`,
-`CHANGELOG.md` and `src/`. To add one: a new member in the root `Cargo.toml`, plus a `[[package]]` entry in
-`release-plz.toml` if its tags shouldn't be `<crate name>-v<version>`.
+## Domain safeguards
 
-### lsw1 (all in `lsw1/src/lib.rs`)
-- Memory addresses (`STATUS`, `GAMESTATE`, `CUTSCENE`, `DOOR`) in emulated GameCube RAM.
-- `Settings` (shown in the LiveSplit One UI).
-- The door lists for room splits.
-- `find_ram`/`attach`, which locate Dolphin's MEM1 in the process.
-- `should_split`, the split decision: old state compared with new state.
+- Keep lsw1's supported ASL and Rust split logic in sync; update parity expectations
+  deliberately and document intentional differences.
+- GameCube memory is big-endian: read through `FromEndian`.
+- On Linux, attaching needs ptrace permission on OBS; see lsw1 setup for “Waiting to attach”.
+- Live split validation needs Dolphin, the game and OBS; ask the user to test live.
+- sadx imports WASI `clock_time_get` directly: asr's `Instant` exists only on WASI,
+  while this workspace targets `wasm32-unknown-unknown`. LiveSplit One links WASI
+  for modules importing it.
 
-### sadx (all in `sadx/src/lib.rs`)
-- Memory offsets from the game module (`GLOBAL_FRAME_COUNT`, `GAME_MODE`, ...), read through `read_state`.
-- Frame-counted game time; pre-rendered movies are timed with a wall clock (`clock::Instant`).
-- `should_start`, `should_reset`, `should_split`.
-
-Both are built on the `asr` crate, pinned to the same git rev.
-
-## Commands (what CI runs, from the repo root)
+## Checks (repo root; exact CI commands)
 
 ```sh
-cargo build --release --locked --workspace     # .cargo/config.toml defaults the target to wasm32-unknown-unknown
+cargo build --release --locked --workspace
 cargo clippy --release --locked --workspace -- -D warnings
 cargo fmt --all --check
-cargo test --workspace --target x86_64-unknown-linux-gnu --locked                     # tests run on the host
+cargo test --workspace --target x86_64-unknown-linux-gnu --locked
 cargo clippy --workspace --target x86_64-unknown-linux-gnu --locked --tests -- -D warnings
 ```
 
-The Rust toolchain is pinned in `rust-toolchain.toml`; Renovate bumps it.
-
-Output: `target/wasm32-unknown-unknown/release/<crate>.wasm` (`lsw1_wasm.wasm`, unchanged from before the monorepo,
-and `sadx_livesplit_one.wasm`). A plain `cargo test` fails, because the default target is wasm. The no_std libs only
-link for wasm, so host builds need `--tests`.
-
-The lsw1 tests check that `ENTER_DOORS`/`LEAVE_DOORS`/`PODRACE_DOORS` still match `lsw1/dolphin.asl`, and check
-`should_split`'s settings and edge cases. When split logic changes, change the ASL parity expectations deliberately.
-
-## Release
-
-release-plz cuts a release per splitter from Conventional Commits. lsw1's tags are `lsw1-vX.Y.Z` (older `vX.Y.Z` tags
-from when this repo was `lsw1-wasm` are kept, with `lsw1-v` copies), and its changelog is `lsw1/CHANGELOG.md`.
-sadx's tags are `sadx-vX.Y.Z`; 0.1.0 was released from the old repo and has no tag here (a tag on the imported
-commits breaks release-plz, which needs the workspace root), so its first release here is 0.2.0.
-
-`release-plz.yml` passes the token to the GitHub API via `--git-token`, but release-plz pushes its release branch and
-tags with plain `git push` from a temp clone, so the job also installs a `credential.helper` that hands git the same
-token. Without it the push fails to authenticate.
-
-`release.yml` runs for those tags: it builds that splitter's `.wasm`, plus any `.asl` in its dir (lsw1's
-`dolphin.asl`), and publishes a GitHub release with the changelog section as notes. GitHub is the home; Codeberg is a
-read-only mirror.
-
-## Gotchas
-
-- lsw1 ships both a supported ASL and a supported wasm, so its split logic must match `lsw1/dolphin.asl`. Change the
-  ASL and the Rust together, and say where they differ on purpose.
-- GameCube memory is big-endian, so reads go through `FromEndian`.
-- On Linux the splitter needs ptrace permission on the OBS binary (see `lsw1/README.md`). "Waiting to attach" with no
-  error is usually that.
-- A real run needs Dolphin, the game and OBS, so ask the user to test splits live.
-- sadx imports WASI's `clock_time_get` itself, because asr's `Instant` exists only on the WASI target while the
-  workspace builds `wasm32-unknown-unknown`. LiveSplit One's runtime links WASI for any module importing it.
+`.cargo/config.toml` defaults to wasm; plain `cargo test` fails. Tests run on the
+explicit host target; the no_std libraries only link for wasm, so host clippy needs
+`--tests`. The toolchain is pinned in `rust-toolchain.toml` and bumped by Renovate.
