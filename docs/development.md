@@ -62,5 +62,4 @@ clone, so it also installed a `credential.helper` handing git the same token. Wi
 workflow failed to authenticate pushes.
 
 `release.yml` runs for those tags: it builds that splitter's `.wasm`, plus any `.asl` in its dir (lsw1's
-`dolphin.asl`), and publishes a GitHub release with the changelog section as notes. GitHub is the home; Codeberg is a
-read-only mirror.
+`dolphin.asl`), and publishes a GitHub release with the changelog section as notes.
