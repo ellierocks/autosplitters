@@ -7,7 +7,8 @@ Cargo workspace of WebAssembly autosplitters for LiveSplit One in OBS on Linux.
 - Keep lsw1's supported ASL and Rust split logic in sync; update parity expectations
   deliberately and document intentional differences.
 - GameCube memory is big-endian: read through `FromEndian`.
-- On Linux, attaching needs ptrace permission on OBS; see lsw1 setup for “Waiting to attach”.
+- On Linux, attaching needs ptrace permission on OBS; see the
+  [lsw1 setup](lsw1/README.md#linux-allow-obs-to-read-dolphins-memory) for “Waiting to attach”.
 - Live split validation needs Dolphin, the game and OBS; ask the user to test live.
 - sadx imports WASI `clock_time_get` directly: asr's `Instant` exists only on WASI,
   while this workspace targets `wasm32-unknown-unknown`. LiveSplit One links WASI
