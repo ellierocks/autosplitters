@@ -4,7 +4,7 @@ name: release
 # This job builds that splitter's .wasm (plus its .asl, if it ships one) and puts them on the release.
 on:
   push:
-    tags: ["lsw1-v*", "sadx-v*"]
+    tags: ["lsw1-v*", "lsw1-pc-v*", "sadx-v*"]
 
 jobs:
   wasm:
