@@ -26,7 +26,8 @@ uses PE metadata and two code windows, described below.
 
 “Derived” means the JP code establishes the same role that the ASL needs, and
 data/GC evidence corroborates it. It does not prove identical edge timing in
-patch 2 and JP. No field has had a controlled gameplay transition validated yet.
+patch 2 and JP. The live capture below corroborates the Cruiser completion and
+diner-to-title transitions; other routes and New Game remain untested.
 
 | ASL value | Patch 2 VA | JP VA (RVA) | Confidence and JP evidence |
 |---|---|---|---|
@@ -36,7 +37,7 @@ patch 2 and JP. No field has had a controlled gameplay transition validated yet.
 | `door` string16 | `0x79B0E0` | `0x7993A0` (`0x3993A0`) | **Derived, strong.** `0x4510B0` copies the door name to this buffer using `0x4CDA80` (NUL-terminated copy). `0x450980` resolves it against the loaded world's door objects and clears its first byte if unmatched. `0x454A76` also clears it; `0x452FB0` writes hub spawn doors here. GC counterpart `lbl_801DC964`, copied by `fn_800CC3FC`. The backing buffer is larger than 16; the port preserves ASL string16. |
 | `levelpath` string64, pointer+0 | `0x77220C → +0` | `0x7731FC → +0` (`0x3731FC`) | **Derived, strong.** Global pointer to current world, independently paired by `PadOutPause` JP `0x456850` ↔ GC `0x8009F0B8` / `lbl_80409410`. Constructor `0x453CF0` writes `levels\\` then the scene table's path to **offset 0** of the world, and builds the file path separately at +`0x80`. Main swaps this pointer between `0x3295D60` and `0x3297B78`. Read a 32-bit pointer once and then the string at +0; do not add another pointer dereference. |
 | `cutscene` byte | `0x78D04C` | `0x78B30C` (`0x38B30C`) | **Derived candidate; timing unverified.** This JP global counts active cutscene instances. `0x41CDE0` zeroes it at `0x41CEC7`, walks eight slots, and increments it at `0x41D23A` for active instances. Start routine `0x41D8B0` writes 1 at `0x41DC5C`; render routine `0x41D780` checks >0. This supports the ASL's `==1` outro check. It is distinct from the engine playing flag `0x32A02E8`. No readable patch 2 writer was available to prove the cross-build correspondence; verify on each outro. |
-| `status` byte | `0x79C58D` | **Unresolved** | A constant-shift candidate `0x79A84D` was rejected (details below). Runtime state uses `None`; generic `0/5 → 18` level-complete rules remain implemented/tested but cannot fire until this mapping is resolved. |
+| `status` byte | `0x79C58D` | **Unresolved; new candidate `0x79A845`** | The new candidate is SFX snapshot `+0x4D`: observed `0 → 18` at Cruiser results and back to 0 in the diner. This single route does not establish patch 2 correspondence or other levels/Kamino Free Play. The constant-shift candidate `0x79A84D` was rejected. Runtime state still uses `None`; generic completion cannot fire. |
 
 These mappings are separate conclusions: initialized data moves by `+0xFF0`
 for `currscene`, `-0x3D0` for `title`; other code-derived globals happen to have
@@ -110,11 +111,10 @@ build discriminator, not a claim that every byte of the process is unmodified.
 
 ## Remaining live checks
 
-Please run these with OBS/LiveSplit One; no game was launched, stopped,
-restarted or controlled for this investigation. One read-only snapshot of the
-already-running title scene showed current scene=124, a readable world pointer,
-empty door, zero menu-transition byte and menu depth=2. That corroborates memory
-layout only; it does not verify an edge or category.
+No game was launched, stopped, restarted or controlled by the agent. Ellie
+performed the gameplay transitions in the capture below. These remaining checks
+need OBS/LiveSplit One as well as the game; reading RAM does not verify the
+runtime's process attachment or actual timer actions.
 
 1. **New Game:** watch JP `0x799390`, `0x77B248`, `0x772434` together at 60 Hz.
    Confirm the start byte rises while depth=1 and current scene=124, before
@@ -131,8 +131,51 @@ layout only; it does not verify an edge or category.
    Maul, Vader, A New Hope and Gunship; confirm count=1 occurs at the intended
    final cue. Test Gunship after the 600-update grace period and debug pause.
 5. **Reset/Rush/latches:** diner→title must reach `levels\\titles` within the
-   60-update leeway; loading a save must not reset. Check Rush countdown at
+   60-update leeway (observed once below); loading a save must not reset. Check Rush countdown at
    60 Hz and room backtracking does not retrigger one-shot latches.
+
+## Live capture: Cruiser completion and diner-to-title
+
+On 2026-11-09 at 14:57:21 UTC, a read-only `/proc/689554/mem` observer sampled
+the already-running launcher-patched JP game at a requested 120 Hz for 91.633 s.
+Both build-guard code signatures were checked first. The capture contains
+10,996 consistent samples and no read errors; unchanged samples were compressed.
+Ellie performed the completion and menu actions. This is RAM observation, not
+an OBS/wasm timer test, and the fields are read sequentially rather than atomically.
+
+| Elapsed seconds | Observation |
+|---|---|
+| 0.000042 | Scene 94, `levels\\episode_iii\\chapter_02\\Cruiser_G`, door `door_grev`, count/playing=0. |
+| 50.783401 | Menu request byte rises to 1, pending scene=96, depth=3; the door clears. |
+| 50.833421 | Scene 96, `Cruiser_Outro`; world switches to `0x3297B78`; count=1 and playing=1. |
+| 65.266735 | Playing clears while count remains 1. |
+| 65.300072 | Scene 97, `Cruiser_Status`; world switches to `0x3295D60`. Snapshot byte `0x79A845` (`+0x4D`) changes `0 → 18`. |
+| 65.325070 | Active count clears, about 25 ms after results-path entry. |
+| 74.216787 | Scene 123, `levels\\Map\\Map_E`; scene request is still pending. |
+| 75.225073 | Request clears, door becomes `door_to_E3_02`; new status candidate returns to 0. |
+| 78.458401 | Request rises with pending scene=124, depth=2; diner path remains readable. |
+| 79.058414 | Current scene becomes 124 while the old diner path remains readable. |
+| 79.066783 | World path is briefly empty. |
+| 79.075077 | `levels\\titles`, request=0, depth=1; world switches to `0x3297B78`. |
+
+The reset leeway continues to refresh while the diner path remains visible,
+including most of the 0.617 s return transition. Only about 17 ms separates the
+last observed diner sample and the title-path sample. Replaying these memory
+states at 60 Hz with several sampling phases produces exactly one reset and
+no New Game start. This confirms the predicate against this trace, not an
+actual LiveSplit timer reset. New Game's rising edge was not exercised.
+
+The rejected `0x79A84D` stayed zero throughout completion. New candidate
+`0x79A845` matches `0 → 18` on this route, and has the already-traced snapshot
+writer `0x488BCC` / `0x4BD7C0`. Its bits and containing patch 2 global still need
+to be correlated; the precomputed physical-sample list alone does not establish
+the running engine's sample IDs. Do not promote this single observation to a
+verified mapping. Note also that this route uses scene **97**, not generic scene
+126: a scene-126-only completion fallback would miss it.
+
+The local raw JSONL capture was kept outside Git at
+`/tmp/lsw1-jp-ram-2026-11-09.jsonl`, SHA-256
+`c1f0e892ca393d41bd912600d27e868fd397ae4dae44a88510a506df73ca5fec`.
 
 ## Reusable static evidence
 

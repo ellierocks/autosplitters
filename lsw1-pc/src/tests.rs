@@ -492,6 +492,42 @@ fn reset_only_fires_on_title_entry_within_diner_leeway_and_consumes_it() {
 }
 
 #[test]
+fn captured_diner_to_title_transition_resets_once_without_starting() {
+    // Read-only JP capture, 2026-11-09: events relative to t=78 s.
+    // The old diner path persists after scene 124 is selected, then the
+    // double-buffered world briefly has an empty path before titles appears.
+    let events = [
+        (0, 123, 0, 2, "door_to_E3_02", "levels\\Map\\Map_E"),
+        (458_401, 123, 1, 2, "", "levels\\Map\\Map_E"),
+        (1_058_414, 124, 1, 0, "", "levels\\Map\\Map_E"),
+        (1_066_783, 124, 1, 0, "", ""),
+        (1_075_077, 124, 0, 1, "", "levels\\titles"),
+    ];
+    let settings = Settings::default();
+    for phase_us in [0, 4_000, 8_000, 12_000] {
+        let mut engine = Engine::default();
+        let mut old = at("door_to_E3_02", "levels\\Map\\Map_E");
+        let mut resets = 0;
+        for tick in 0..120 {
+            let now_us = phase_us + tick * 1_000_000 / 60;
+            let &(_, currscene, start, title, door, path) =
+                events.iter().rev().find(|event| event.0 <= now_us).unwrap();
+            let current = State {
+                currscene,
+                start,
+                title,
+                ..at(door, path)
+            };
+            engine.update(&settings, &old, &current);
+            assert!(!engine.should_start(&settings, &old, &current));
+            resets += usize::from(engine.should_reset(&settings, &old, &current));
+            old = current;
+        }
+        assert_eq!(resets, 1, "sampling phase {phase_us} us");
+    }
+}
+
+#[test]
 fn all_asl_path_literals_fit_the_64_byte_watch_buffer() {
     for path in include_str!("../joey.asl")
         .split('"')
