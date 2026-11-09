@@ -80,6 +80,52 @@ fn unreadable_truncated_or_unbounded_header_is_rejected() {
     assert_eq!(reads, 1);
 }
 
+#[test]
+fn jp_status_memory_reaches_completion_logic_for_negotiations_and_cruiser() {
+    use crate::logic::{Engine, Settings};
+
+    // This exercises the runtime memory reader, including the status RVA.
+    // A logic-only test would miss the former unconditional `status: None`.
+    let base = Address::new(0x400000);
+    let world = Address32::new(0x3295d60);
+    for (scene, path) in [
+        (6u8, "levels\\episode_i\\chapter_01\\Negotiations_Status"),
+        (97, "levels\\episode_iii\\chapter_02\\Cruiser_Status"),
+    ] {
+        let mut image = vec![0u8; 0x39b000];
+        image[0x372434] = scene;
+        image[0x3731fc..0x373200].copy_from_slice(&0x3295d60u32.to_le_bytes());
+        let mut path_bytes = [0u8; 64];
+        path_bytes[..path.len()].copy_from_slice(path.as_bytes());
+        let mut sample = |status| {
+            image[0x39a845] = status;
+            read_state(base, |address, bytes| {
+                let source = if address == world.into() {
+                    &path_bytes[..bytes.len()]
+                } else {
+                    let offset = address.value().checked_sub(base.value())? as usize;
+                    image.get(offset..offset + bytes.len())?
+                };
+                bytes.copy_from_slice(source);
+                Some(())
+            })
+            .unwrap()
+        };
+        for previous in [0, 5] {
+            let old = sample(previous);
+            let current = sample(18);
+            assert_eq!(current.status, Some(18));
+            assert_eq!(current.levelpath.as_bytes(), path.as_bytes());
+            let mut engine = Engine::default();
+            let settings = Settings::default();
+            engine.update(&settings, &old, &current);
+            assert!(engine.should_split(&settings, &old, &current));
+            engine.update(&settings, &current, &current);
+            assert!(!engine.should_split(&settings, &current, &current));
+        }
+    }
+}
+
 // .text's RVA equals its raw file offset in both supplied exes. No game assets
 // are checked in; run this locally to verify the guard against the real inputs.
 #[test]

@@ -5,6 +5,7 @@ use core::mem::MaybeUninit;
 use crate::logic::State;
 
 const PROCESS_NAMES: &[&str] = &["LegoStarwars.exe", "LegoStarwars"];
+const STATUS: u64 = 0x0039_a845;
 const START: u64 = 0x0039_9390;
 const TITLE: u64 = 0x0037_b248;
 const CUTSCENE: u64 = 0x0038_b30c;
@@ -100,33 +101,48 @@ pub(crate) fn attach() -> Option<Game> {
 
 impl Game {
     pub(crate) fn poll(&self) -> Option<State> {
-        let p = &self.process;
-        let base = self.module;
-        let scene = p.read::<u8>(base + CURRSCENE).ok()?;
-        let path = p.read::<Address32>(base + LEVELPATH).ok()?;
-        if path == Address32::NULL {
-            return None;
-        }
-        let state = State {
-            // JP status is unresolved; see addresses.md. Keep completion
-            // predicates in the logic, but do not read a guessed offset.
-            status: None,
-            start: p.read(base + START).ok()?,
-            title: p.read(base + TITLE).ok()?,
-            cutscene: p.read(base + CUTSCENE).ok()?,
-            currscene: scene,
-            door: p.read(base + DOOR).ok()?,
-            levelpath: p.read(path).ok()?,
-        };
-        // The path is the first field of a double-buffered world object. Do not
-        // mix a room from one buffer with the globals from its successor.
-        if p.read::<Address32>(base + LEVELPATH).ok()? != path
-            || p.read::<u8>(base + CURRSCENE).ok()? != scene
-        {
-            return None;
-        }
-        Some(state)
+        read_state(self.module, |address, bytes| {
+            self.process.read_into_buf(address, bytes).ok()
+        })
     }
+}
+
+fn read_state(
+    base: Address,
+    mut read: impl FnMut(Address, &mut [u8]) -> Option<()>,
+) -> Option<State> {
+    fn value<T: bytemuck::Pod>(
+        read: &mut impl FnMut(Address, &mut [u8]) -> Option<()>,
+        address: impl Into<Address>,
+    ) -> Option<T> {
+        let mut result = T::zeroed();
+        read(address.into(), bytemuck::bytes_of_mut(&mut result))?;
+        Some(result)
+    }
+    let scene = value::<u8>(&mut read, base + CURRSCENE)?;
+    let path = value::<Address32>(&mut read, base + LEVELPATH)?;
+    if path == Address32::NULL {
+        return None;
+    }
+    let state = State {
+        // The status-screen SFX branch explicitly loads physical sounds
+        // 617 and 620, yielding 0x12 in snapshot byte +0x4d.
+        status: Some(value(&mut read, base + STATUS)?),
+        start: value(&mut read, base + START)?,
+        title: value(&mut read, base + TITLE)?,
+        cutscene: value(&mut read, base + CUTSCENE)?,
+        currscene: scene,
+        door: value(&mut read, base + DOOR)?,
+        levelpath: value(&mut read, path)?,
+    };
+    // The path is the first field of a double-buffered world object. Do not
+    // mix a room from one buffer with the globals from its successor.
+    if value::<Address32>(&mut read, base + LEVELPATH)? != path
+        || value::<u8>(&mut read, base + CURRSCENE)? != scene
+    {
+        return None;
+    }
+    Some(state)
 }
 
 #[cfg(test)]

@@ -17,14 +17,15 @@ code signatures, preserving compatibility with `lsw1-jp-patch` debug labels,
 cutscene pausing and resolution changes. It does not hash the installed exe.
 Patch 2 and other builds are rejected before any JP gameplay globals are read.
 
-**Generic level-complete splitting is disabled until `status` is mapped.** A
-candidate sound-bit snapshot byte was rejected; its `0/5 → 18` behavior has not
-been established across JP levels. A live Cruiser completion capture found a
-new candidate and confirmed the diner-to-title memory transition fits the reset
-window; its trace is replayed in tests. Other start/outro/category timing still
-needs live checks. See [addresses.md](addresses.md) for the evidence, confidence
-and specific runtime checks. Treat this as a starting
-point for live validation, not a race-ready splitter.
+Generic level-complete splitting reads JP `0x79A845` and follows Joey's
+`0/5 → 18` predicates. The JP status-screen code loads the two sound bits that
+produce 18; the running engine's sample table and a Cruiser completion capture
+corroborate the mapping. Negotiations uses the same status-screen branch. The
+earlier build left completion disabled; replace/reload its wasm to get this fix.
+A diner-to-title capture also fits the reset window and is replayed in tests.
+Other start/outro/category timing still needs live checks. See
+[addresses.md](addresses.md) for evidence and the remaining checks. Treat this
+as a starting point for live validation, not a race-ready splitter.
 
 All ten setting IDs, labels and defaults follow Joey's ASL: `newgame`,
 `freeplay`, `rushstart`, `maul`, `vader`, `anh`, `dooku`, `rushend`, `room`,

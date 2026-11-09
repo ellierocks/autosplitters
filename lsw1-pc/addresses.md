@@ -37,13 +37,15 @@ diner-to-title transitions; other routes and New Game remain untested.
 | `door` string16 | `0x79B0E0` | `0x7993A0` (`0x3993A0`) | **Derived, strong.** `0x4510B0` copies the door name to this buffer using `0x4CDA80` (NUL-terminated copy). `0x450980` resolves it against the loaded world's door objects and clears its first byte if unmatched. `0x454A76` also clears it; `0x452FB0` writes hub spawn doors here. GC counterpart `lbl_801DC964`, copied by `fn_800CC3FC`. The backing buffer is larger than 16; the port preserves ASL string16. |
 | `levelpath` string64, pointer+0 | `0x77220C → +0` | `0x7731FC → +0` (`0x3731FC`) | **Derived, strong.** Global pointer to current world, independently paired by `PadOutPause` JP `0x456850` ↔ GC `0x8009F0B8` / `lbl_80409410`. Constructor `0x453CF0` writes `levels\\` then the scene table's path to **offset 0** of the world, and builds the file path separately at +`0x80`. Main swaps this pointer between `0x3295D60` and `0x3297B78`. Read a 32-bit pointer once and then the string at +0; do not add another pointer dereference. |
 | `cutscene` byte | `0x78D04C` | `0x78B30C` (`0x38B30C`) | **Derived candidate; timing unverified.** This JP global counts active cutscene instances. `0x41CDE0` zeroes it at `0x41CEC7`, walks eight slots, and increments it at `0x41D23A` for active instances. Start routine `0x41D8B0` writes 1 at `0x41DC5C`; render routine `0x41D780` checks >0. This supports the ASL's `==1` outro check. It is distinct from the engine playing flag `0x32A02E8`. No readable patch 2 writer was available to prove the cross-build correspondence; verify on each outro. |
-| `status` byte | `0x79C58D` | **Unresolved; new candidate `0x79A845`** | The new candidate is SFX snapshot `+0x4D`: observed `0 → 18` at Cruiser results and back to 0 in the diner. This single route does not establish patch 2 correspondence or other levels/Kamino Free Play. The constant-shift candidate `0x79A84D` was rejected. Runtime state still uses `None`; generic completion cannot fire. |
+| `status` byte | `0x79C58D` | `0x79A845` (`0x39A845`) | **Derived and observed on Cruiser.** SFX snapshot `0x79A7F8+0x4D`. The status-scene branch of `0x488170` adds physical sounds 617 and 620, producing `0x12` here; traced through `0x4BD700` and snapshot copy at `0x488BCC`. Both running-engine IDs and Cruiser `0 → 18 → 0` behavior were observed. Negotiations scene 6 and Cruiser scene 97 both select this branch. Generic completion reads this byte; Kamino `5 → 18` remains source parity pending live validation. |
 
 These mappings are separate conclusions: initialized data moves by `+0xFF0`
 for `currscene`, `-0x3D0` for `title`; other code-derived globals happen to have
 a `-0x1D40` difference. The supplied LEGO Options flag moves by `-0x1D40`, its
 label by `-0x5028`, and the cutscene-playing flag by `-0x3C780`. None supplies
 a universal translation.
+
+Status moves by `-0x1D48`, not the nearby globals' `-0x1D40`.
 
 ## Rejected status shortcut
 
@@ -70,11 +72,43 @@ at `+0x55` of the 100-byte SFX bit snapshot at `0x79A7F8`:
   containing global for patch 2's ASL byte still needs to be established.
 
 Nothing in the JP readers/writers establishes that `0x79A84D` yields 18 at
-completion. Do not re-enable it based on a shared relocation delta or one
-coincidental RAM sample. Resolve the source byte's sound IDs or capture its
-actual patch 2 writer, then identify the same JP bits/transition. If JP encodes
-the same cue differently, normalize it deliberately and document the difference
-before feeding the ASL predicates.
+completion. It also stayed zero throughout the Cruiser capture. The correct
+JP byte is eight bytes earlier, as established independently below.
+
+## Resolved status byte: `0x79A845`
+
+Following the first 1-1 test, the status branch was traced in full rather than
+assuming its sound names would all begin with `Status`:
+
+- `SetLevelSfxBits` tests `world->scene_record->flags & 0x4000` at
+  `0x4881A3–0x4881AF`. The scene record comes from world offset `0x1A8`;
+  its flags are at record +4. Negotiations scene 6 (`Negotiations_Status`) has
+  flags `0x4001`; Cruiser scene 97 has `0x4000`. All 18 chapter/bonus status
+  entries have this bit. Generic scene 126 is not their completion scene.
+- This branch looks up `Kam_TurretOn` at `0x4881D2`, then
+  `Kam_DiscoFFieldOff` at `0x4881E1`, alongside `StatusAward` and other UI
+  effects. Their names describe their original use; the status screen also
+  loads them. REA evidence:
+  `ev_2553d080c3a069443b2af57f837fc00923bfe521459a46c8675af55ab22145e7`.
+- Read-only inspection of the running JP sample table `0x3375200` confirmed
+  logical entries 381/384 resolve to physical IDs **617/620**. Lookup
+  `0x4BD900` reads the name pointer at entry +0; `0x4BD700` extracts the signed
+  15-bit physical ID at entry +4 (stride `0x40`). Both bits are in byte
+  `617 / 8 = 620 / 8 = 0x4D`; bits 1 and 4 produce **`0x12`**.
+- `0x488BCC` copies the active sound bits into snapshot `0x79A7F8` through
+  `0x4BD7C0`, then masks the snapshot through `0x4BD800`. Thus the watched byte
+  is `0x79A7F8 + 0x4D = 0x79A845`, not snapshot +`0x55`.
+- The Cruiser capture below observed exactly `0 → 18` on results entry and
+  `18 → 0` on diner return. The same status branch covers Negotiations and
+  the other status entries. This establishes the JP role needed by the ASL
+  without claiming to have read encrypted patch 2 code. The runtime now reads
+  the raw byte and uses the source's unchanged `0/5 → 18` predicates.
+
+The regression test exercises the actual memory-reading function through the
+split engine for both Negotiations and Cruiser, checking the status address,
+both preceding values and no repeated split while 18 stays set. The first
+experimental build supplied `None` unconditionally, so its logic-only tests
+could pass while no live status screen could split.
 
 ## Cutscene and New Game distinctions
 
@@ -119,10 +153,11 @@ runtime's process attachment or actual timer actions.
 1. **New Game:** watch JP `0x799390`, `0x77B248`, `0x772434` together at 60 Hz.
    Confirm the start byte rises while depth=1 and current scene=124, before
    scene becomes 123. Check load-game selection does not accidentally start.
-2. **Generic completion (blocking mapping):** capture the real patch 2
-   `0x79C58D` and its writer during normal completion and Kamino Free Play;
-   correlate to the JP completion sound/resource bits or another proven JP
-   equivalent. Confirm `0→18` and `5→18`, and no lap/room false positives.
+2. **Generic completion:** confirm the installed wasm splits once on
+   Negotiations results and on other chapter results. Watch `0x79A845` for
+   `0→18`; test Kamino Free Play's source `5→18` case and no lap/room false
+   positives. A patch 2 writer capture would further corroborate the source
+   correspondence; no source code has been read from its encrypted disk image.
 3. **Paths/doors:** watch `*(u32*)0x7731FC` at offset 0 and `0x7993A0` through
    loads, Podrace laps and Maul's wall warp; confirm expected ASCII paths,
    capitalization, 16-byte door truncation and edge order. JP scene-table paths
@@ -165,12 +200,9 @@ states at 60 Hz with several sampling phases produces exactly one reset and
 no New Game start. This confirms the predicate against this trace, not an
 actual LiveSplit timer reset. New Game's rising edge was not exercised.
 
-The rejected `0x79A84D` stayed zero throughout completion. New candidate
-`0x79A845` matches `0 → 18` on this route, and has the already-traced snapshot
-writer `0x488BCC` / `0x4BD7C0`. Its bits and containing patch 2 global still need
-to be correlated; the precomputed physical-sample list alone does not establish
-the running engine's sample IDs. Do not promote this single observation to a
-verified mapping. Note also that this route uses scene **97**, not generic scene
+The rejected `0x79A84D` stayed zero throughout completion. The observed byte
+`0x79A845` was subsequently mapped through its writer and the running-engine
+sound IDs, as described above. This route uses scene **97**, not generic scene
 126: a scene-126-only completion fallback would miss it.
 
 The local raw JSONL capture was kept outside Git at

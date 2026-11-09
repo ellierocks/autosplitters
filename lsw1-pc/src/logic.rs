@@ -56,8 +56,8 @@ impl Default for Settings {
 
 #[derive(Clone, Copy, Default)]
 pub(crate) struct State {
-    // Unknown until the JP completion discriminator is mapped. No fabricated
-    // byte is allowed to trigger the otherwise unchanged ASL completion rules.
+    // Unknown in an uninitialized/synthetic state. Runtime samples read the JP
+    // SFX snapshot byte; see addresses.md for the status-screen writer.
     pub(crate) status: Option<u8>,
     pub(crate) start: u8,
     pub(crate) title: u8,
