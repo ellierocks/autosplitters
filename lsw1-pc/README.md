@@ -20,7 +20,8 @@ Patch 2 and other builds are rejected before any JP gameplay globals are read.
 Generic level-complete splitting reads JP `0x79A845` and follows Joey's
 `0/5 → 18` predicates. The JP status-screen code loads the two sound bits that
 produce 18; the running engine's sample table and a Cruiser completion capture
-corroborate the mapping. Negotiations uses the same status-screen branch. The
+corroborate the mapping. Ellie also confirmed Negotiations (1-1) status-screen
+splitting in LiveSplit One with the corrected build. The
 earlier build left completion disabled; replace/reload its wasm to get this fix.
 A diner-to-title capture also fits the reset window and is replayed in tests.
 Other start/outro/category timing still needs live checks. See

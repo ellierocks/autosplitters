@@ -110,6 +110,12 @@ both preceding values and no repeated split while 18 stays set. The first
 experimental build supplied `None` unconditionally, so its logic-only tests
 could pass while no live status screen could split.
 
+After installing the corrected wasm (source commit `9471150`, dotfiles commit
+`631BFED`) and reloading it, Ellie confirmed that Negotiations (1-1) status-screen
+splitting works in LiveSplit One. This is a user-reported live timer check;
+the agent did not capture that timer event. Other chapters and Kamino Free Play
+still need live timer checks.
+
 ## Cutscene and New Game distinctions
 
 The supplied engine-playing pair `0x32DCA68 ↔ 0x32A02E8` is corroborated by
@@ -153,8 +159,8 @@ runtime's process attachment or actual timer actions.
 1. **New Game:** watch JP `0x799390`, `0x77B248`, `0x772434` together at 60 Hz.
    Confirm the start byte rises while depth=1 and current scene=124, before
    scene becomes 123. Check load-game selection does not accidentally start.
-2. **Generic completion:** confirm the installed wasm splits once on
-   Negotiations results and on other chapter results. Watch `0x79A845` for
+2. **Generic completion:** Negotiations results now split in Ellie's live test.
+   Check other chapter results. Watch `0x79A845` for
    `0→18`; test Kamino Free Play's source `5→18` case and no lap/room false
    positives. A patch 2 writer capture would further corroborate the source
    correspondence; no source code has been read from its encrypted disk image.
