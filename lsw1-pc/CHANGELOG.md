@@ -8,8 +8,6 @@
 
 - *(lsw1-pc)* start experimental Japanese PC wasm autosplitter ([#6](https://github.com/ellierocks/autosplitters/pull/6))
 
-### Added
-
 - Experimental Japanese PC 1.0 wasm port of Elle / Joeyfordayz's ASL, with JP build identification, stateful room splits and per-address research notes.
 
 ### Fixed
