@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["lsw1", "sadx"]
+members = ["lsw1", "lsw1-pc", "sadx"]
 
 [profile.release]
 lto = true
